@@ -1,0 +1,40 @@
+HorizonLens includes the following third-party software. HorizonLens itself
+is licensed under the GNU General Public License version 3 (LICENSE.txt);
+the parts below keep their own licenses and are NOT covered by HorizonLens's
+license.
+
+RealCam camera module and capture helper (_internal\vendor\companion and
+_internal\vendor\capture)
+  HorizonLensCamera.dll (Steam; the Microsoft Store build is in xbox\) is
+  RealCam's Forza Horizon 6 camera module (RealCamForza6.dll), and
+  HorizonLensCapture.exe is RealCam's NVIDIA game capture helper
+  (RealCamForzaNvencCapture.exe). Both are third-party software by the
+  RealCam team, included unmodified apart from the file names, and remain
+  their property under RealCam's own terms. All credit for these two files
+  goes to RealCam. They are not open source and are not licensed under the
+  GPL; HorizonLens only loads and runs them.
+
+FFmpeg 9.0.2 (_internal\vendor\ffmpeg)
+  Build: "essentials" build from https://www.gyan.dev/ffmpeg/builds/
+  License: GNU General Public License version 3 (this build enables GPL
+  components). Full text: https://www.gnu.org/licenses/gpl-3.0.html
+  Source code: https://ffmpeg.org/download.html (release 9.0.2) and the
+  build configuration published at https://www.gyan.dev/ffmpeg/builds/
+  ffmpeg.exe and ffprobe.exe are unmodified and run as separate programs.
+
+MediaMTX 1.21.2 (_internal\vendor\mediamtx)
+  License: MIT. Full text: _internal\vendor\mediamtx\LICENSE
+  Source code: https://github.com/bluenviron/mediamtx
+
+Python 3.12 and its standard library
+  License: Python Software Foundation License. https://docs.python.org/3/license.html
+
+PySide6 / Qt 6
+  License: GNU Lesser General Public License version 3.
+  https://www.qt.io/licensing/  Source: https://code.qt.io/
+
+aiohttp (Apache License 2.0), qrcode (BSD), Pillow (MIT-CMU),
+PyAudioWPatch (MIT), PyInstaller bootloader (GPL 2.0 with exception)
+  License texts: https://github.com/aio-libs/aiohttp, https://github.com/lincolnloop/python-qrcode,
+  https://github.com/python-pillow/Pillow, https://github.com/s0d3s/PyAudioWPatch,
+  https://github.com/pyinstaller/pyinstaller

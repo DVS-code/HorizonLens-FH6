@@ -1,0 +1,33 @@
+HorizonLens iPhone app - install with Sideloadly
+================================================
+
+The app adds position tracking (ARKit) on iPhone: the game camera follows
+where you walk, lean and crouch, as well as where you point the phone.
+Needs iOS 15 or newer (iPhone 6s and later).
+
+INSTALL (on your Windows PC)
+1. Install iTunes (from apple.com, not the Microsoft Store version) and
+   Sideloadly from https://sideloadly.io
+2. Plug the iPhone into the PC with a cable and tap Trust on the phone.
+3. Open Sideloadly, drag HorizonLens-iPhone.ipa into it, type your Apple ID
+   and press Start. Enter your Apple ID password / code if asked.
+4. On the iPhone:
+   - Settings > General > VPN & Device Management > tap your Apple ID > Trust
+   - iOS 16 or newer: Settings > Privacy & Security > Developer Mode > On
+     (the iPhone restarts; confirm Turn On).
+
+A free Apple ID install works for 7 days. After that the app won't open:
+plug in and press Start in Sideloadly again (your settings are kept).
+
+USE
+1. On the PC: start HorizonLens and press Start.
+2. On the iPhone: open HorizonLens and scan the QR code. Allow Camera
+   (ARKit tracking only, nothing is recorded or sent) and Local Network.
+3. Tap Tap to Start. In the ... button > Settings, Tracking shows
+   "Position + rotation (AR)".
+4. Point the back of the phone at a lit room. Tap recenter to set where you
+   stand as the starting point.
+
+If the app says it can't reach the PC: check HorizonLens is running and
+Started, and the phone is on the same Wi-Fi. "Scan the QR code again" picks
+up a new PC address.

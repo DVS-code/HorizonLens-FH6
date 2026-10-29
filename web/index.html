@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<title>HorizonLens</title>
+<style>
+  :root{
+    --bg:#000; --sheet:#1c1c1e; --cell:#2c2c2e; --sep:rgba(84,84,88,.6);
+    --txt:#fff; --muted:#98989f; --dim:rgba(235,235,245,.6);
+    --orange:#f59e3b; --green:#30d158; --red:#ef5350; --blue:#0a84ff; --danger:#ff453a;
+    --glass:rgba(22,22,24,.78); --glass-line:rgba(255,255,255,.13);
+    --sb:env(safe-area-inset-bottom); --st:env(safe-area-inset-top);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);overflow:hidden;
+    font:17px/1.3 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif}
+  .hidden{display:none !important}
+  button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;padding:0}
+  svg{display:block}
+
+  .glass{background:var(--glass);border:1px solid var(--glass-line);
+    backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4)}
+  body.plain .glass{background:#1c1c1e;backdrop-filter:none;-webkit-backdrop-filter:none;
+    border-color:#38383a}
+
+  #pair{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:24px;gap:28px;text-align:center}
+  #pair .logo{width:min(78vw,330px)}
+  #pair .card{width:100%;max-width:360px;background:var(--sheet);border-radius:26px;padding:26px 22px}
+  #pair h1{font-size:22px;margin:0 0 6px;font-weight:700}
+  #pair p{color:var(--dim);font-size:15px;margin:0 0 20px;line-height:1.45}
+  #codeInput{width:100%;text-align:center;letter-spacing:5px;font-size:24px;font-weight:600;
+    text-transform:uppercase;background:var(--cell);border:0;color:var(--txt);
+    border-radius:14px;padding:15px;outline:none;-webkit-user-select:text;user-select:text}
+  #pairBtn{display:block;width:100%;margin-top:14px;padding:16px;border-radius:14px;
+    background:var(--orange);color:#000;font-weight:700}
+  #pairBtn:disabled{opacity:.55}
+  #pairErr{color:var(--danger);font-size:14px;min-height:19px;margin-top:10px}
+  #pair .fine{font-size:12px;color:var(--muted);margin:16px 0 0;line-height:1.5}
+
+  #live{position:fixed;inset:0;background:#000;touch-action:none}
+
+  #video{position:absolute;left:0;right:0;top:calc(var(--st) + 17px);width:100%;
+    aspect-ratio:9/16;height:auto;max-height:calc(100% - var(--st) - 17px);
+    object-fit:contain;background:#000}
+  @media (orientation:landscape){#video{inset:0;top:0;height:100%;max-height:none;aspect-ratio:auto}}
+
+  #waiting{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:0 28px;text-align:center;pointer-events:none}
+  #waiting img{width:min(72vw,282px);margin-bottom:46px}
+  #waiting h2{font-size:20px;font-weight:600;margin:0 0 22px;letter-spacing:-.3px}
+  #waiting p{color:var(--dim);font-size:18px;line-height:1.38;margin:0;max-width:300px}
+
+  #status{position:absolute;left:50%;top:calc(var(--st) + 18px);transform:translateX(-50%);
+    z-index:6;height:43px;padding:0 20px;border-radius:999px;display:flex;align-items:center;
+    gap:11px;font-size:17px;white-space:nowrap}
+  #status .led{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
+  #status .led.off{background:#8e8e93}
+  #status.rec .led{background:var(--red)}
+  .round{width:47px;height:47px;border-radius:50%;display:grid;place-items:center;flex:none}
+  .round svg{width:24px;height:24px}
+  .round:active,.press:active{transform:scale(.93)}
+  #btnSettings{position:absolute;right:22px;top:calc(var(--st) + 16px);z-index:6}
+  #btnSettings svg{width:27px;height:27px}
+  #runBadge{position:absolute;left:18px;top:calc(var(--st) + 24px);z-index:6;width:33px;height:33px}
+
+  #btnHide{position:absolute;left:22px;top:calc(var(--st) + 16px);z-index:7}
+  #btnHide svg{width:23px;height:23px}
+  #btnHide .shut{display:none}
+  #live.clean #btnHide .open{display:none} #live.clean #btnHide .shut{display:inline}
+  #live:has(#btnHide:not(.hidden)) #runBadge{top:calc(var(--st) + 74px)}
+  #live > :not(#video):not(#btnHide):not(#waiting){transition:opacity .25s}
+  #live.clean > :not(#video):not(#btnHide):not(#waiting){opacity:0 !important;pointer-events:none !important}
+  #live.clean #btnHide{opacity:.45}
+  #runBadge svg{width:18px;height:18px}
+
+  #reticle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;
+    display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;
+    opacity:0;transition:opacity .25s}
+  #reticle.show{opacity:1}
+  #reticle svg{width:28px;height:28px}
+  #reticle span{font-size:14px;font-weight:600;padding:4px 10px;border-radius:999px}
+
+  .height{position:absolute;z-index:6;width:57px;height:191px;border-radius:30px;
+    display:flex;flex-direction:column;align-items:center;padding-top:8px;touch-action:none}
+  .height .chev{color:#fff;height:20px}
+  .height .chev svg{width:24px;height:20px}
+  .height .track{position:relative;width:45px;height:110px;border-radius:23px;margin:4px 0;
+    background:linear-gradient(#6a6a70,#3a3a3e)}
+  .height .knob{position:absolute;left:50%;top:50%;width:36px;height:36px;border-radius:50%;
+    background:#f2f2f4;transform:translate(-50%,-50%);box-shadow:0 3px 10px rgba(0,0,0,.45);
+    transition:top .18s cubic-bezier(.3,1.4,.5,1)}
+  .height.drag .knob{transition:none}
+  .height .lab{font-size:15px;font-weight:700;letter-spacing:.3px;margin-top:2px}
+
+  .pad{position:absolute;z-index:6;border-radius:50%;touch-action:none;
+    background:rgba(16,16,18,.82);border:3px solid rgba(200,200,205,.85);
+    box-shadow:0 6px 22px rgba(0,0,0,.35)}
+  .pad .ar{position:absolute;width:0;height:0;border-style:solid;opacity:.75}
+  .pad .ar.u{left:50%;transform:translateX(-50%);border-width:0 8.5px 14px;
+    border-color:transparent transparent #9a9a9f}
+  .pad .ar.d{left:50%;transform:translateX(-50%);border-width:14px 8.5px 0;
+    border-color:#9a9a9f transparent transparent}
+  .pad .ar.l{top:50%;transform:translateY(-50%);border-width:8.5px 14px 8.5px 0;
+    border-color:transparent #9a9a9f transparent transparent}
+  .pad .ar.r{top:50%;transform:translateY(-50%);border-width:8.5px 0 8.5px 14px;
+    border-color:transparent transparent transparent #9a9a9f}
+  .pad .knob{position:absolute;left:50%;top:50%;border-radius:50%;background:#f4f4f6;
+    transform:translate(-50%,-50%);display:grid;place-items:center;color:#111;
+    box-shadow:0 4px 14px rgba(0,0,0,.45);transition:transform .16s cubic-bezier(.3,1.4,.5,1)}
+  .pad.drag .knob{transition:none}
+
+  #padFree{width:164px;height:164px;left:calc(50% - 82px);bottom:calc(var(--sb) + 168px)}
+  #padFree .knob{width:58px;height:58px} #padFree .knob svg{width:24px;height:24px}
+  #padFree .ar.u{top:16px} #padFree .ar.d{bottom:16px} #padFree .ar.l{left:15px} #padFree .ar.r{right:15px}
+  #heightFree{right:22px;bottom:calc(var(--sb) + 168px)}
+
+  #padCar{width:123px;height:123px;left:26px;bottom:calc(var(--sb) + 223px)}
+  #padCar .knob{width:44px;height:44px} #padCar .knob svg{width:20px;height:20px}
+  #padCar .ar.u{top:11px} #padCar .ar.d{bottom:11px} #padCar .ar.l{left:11px} #padCar .ar.r{right:11px}
+  #heightCar{left:62px;bottom:calc(var(--sb) + 354px);width:52px;height:137px;padding-top:5px}
+  #heightCar .chev{height:16px} #heightCar .chev svg{height:16px}
+  #heightCar .track{width:41px;height:70px;margin:3px 0} #heightCar .knob{width:30px;height:30px}
+  #heightCar .lab{font-size:12.5px;margin-top:1px}
+
+  #btnSave{position:absolute;z-index:6;left:159px;bottom:calc(var(--sb) + 225px);
+    width:67px;height:61px;border-radius:14px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1px}
+  #btnSave svg{width:22px;height:22px;margin-bottom:3px}
+  #btnSave .t{font-size:13px;font-weight:800;letter-spacing:.6px;line-height:1}
+  #btnSave .s{font-size:7.5px;font-weight:700;letter-spacing:1px;line-height:1.4;color:#d8d8dc}
+  #btnSave.flash{border-color:var(--orange)}
+
+  #presetRow{position:absolute;z-index:6;left:0;right:70px;bottom:calc(var(--sb) + 172px);
+    height:37px;overflow:hidden;touch-action:pan-x;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 94%,transparent);
+            mask-image:linear-gradient(90deg,transparent 0,#000 12%,#000 94%,transparent)}
+  #presetTrack{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;
+    gap:0;transition:transform .32s cubic-bezier(.25,.9,.3,1)}
+  .preset{height:37px;padding:0 17px;border-radius:999px;font-size:11.5px;font-weight:700;
+    letter-spacing:1.6px;color:#c7c7cc;border:1.5px solid transparent;white-space:nowrap;
+    transition:color .2s,border-color .2s,background .2s}
+  .preset.active{color:var(--orange);border-color:rgba(210,210,215,.7);background:rgba(10,10,12,.55)}
+  #btnAdjust{position:absolute;z-index:6;right:24px;bottom:calc(var(--sb) + 172px);
+    width:37px;height:37px;color:var(--orange)}
+  #btnAdjust svg{width:22px;height:22px}
+  #btnAdjust.off{color:#fff}
+
+  #btnRecord{position:absolute;z-index:6;left:calc(50% - 38px);bottom:calc(var(--sb) + 80px);
+    width:76px;height:76px;border-radius:50%;background:#0d0d0f;
+    border:2px solid rgba(255,255,255,.14);display:grid;place-items:center}
+  #btnRecord .fill{width:60px;height:60px;border-radius:50%;background:var(--red);
+    transition:width .22s,height .22s,border-radius .22s}
+  #btnRecord.on .fill{width:28px;height:28px;border-radius:7px}
+  #btnGrid{position:absolute;z-index:6;right:39px;bottom:calc(var(--sb) + 94px)}
+  #btnGrid svg{width:26px;height:26px}
+
+  #btnGallery{position:absolute;z-index:6;left:22px;bottom:calc(var(--sb) + 12px)}
+  #btnRecenter{position:absolute;z-index:6;right:22px;bottom:calc(var(--sb) + 12px)}
+  #viewToggle{position:absolute;z-index:6;left:calc(50% - 84px);bottom:calc(var(--sb) + 12px);
+    width:168px;height:47px;border-radius:999px;display:flex;padding:3px}
+  #viewToggle button{flex:1;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.6px;
+    color:#e5e5ea;transition:background .2s,color .2s}
+  #viewToggle button.active{background:rgba(62,62,66,.85);color:var(--orange);
+    text-shadow:0 0 10px rgba(245,158,59,.45)}
+
+  #toast{position:absolute;left:50%;top:calc(var(--st) + 72px);transform:translateX(-50%);z-index:9;
+    padding:9px 16px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap;
+    opacity:0;transition:opacity .25s;pointer-events:none}
+  #toast.show{opacity:1}
+
+  #gapBadge{position:absolute;left:50%;top:calc(var(--st) + 70px);transform:translateX(-50%);z-index:6;
+    height:28px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:7px;
+    font-size:11.5px;font-weight:700;letter-spacing:1.2px;white-space:nowrap;cursor:pointer}
+  #gapBadge .dot{width:7px;height:7px;border-radius:50%;background:var(--orange)}
+
+  #zoomRail{position:absolute;z-index:6;right:14px;top:calc(var(--st) + 350px);width:44px;height:170px;
+    border-radius:22px;display:flex;flex-direction:column;align-items:center;padding:9px 0;
+    touch-action:none;--t:.38}
+  #zoomRail.left,#btnLock.left{right:auto;left:14px}
+  #zoomRail .cap{font-size:10px;font-weight:800;color:#c7c7cc;line-height:1}
+  #zoomRail .track{position:relative;flex:1;width:4px;margin:7px 0;border-radius:2px;background:rgba(255,255,255,.28)}
+  #zoomRail .track::before{content:"";position:absolute;left:0;right:0;bottom:0;border-radius:2px;
+    height:calc(var(--t) * 100%);background:var(--orange)}
+  #zoomRail .knob{position:absolute;left:50%;bottom:calc(var(--t) * 100%);width:24px;height:24px;border-radius:50%;
+    background:#f4f4f6;transform:translate(-50%,50%);box-shadow:0 3px 10px rgba(0,0,0,.45)}
+  #zoomRail.drag .knob{width:28px;height:28px}
+  #btnLock{position:absolute;z-index:6;right:12px;top:calc(var(--st) + 292px);width:48px;height:48px}
+  #btnLock svg{width:22px;height:22px}
+  #btnLock.on{color:var(--orange);border-color:rgba(245,158,59,.6)}
+  #btnLock .open{display:inline} #btnLock .shut{display:none}
+  #btnLock.on .open{display:none} #btnLock.on .shut{display:inline}
+
+  .scrim{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;
+    transition:opacity .28s}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;top:calc(var(--st) + 10px);background:var(--sheet);
+    border-radius:34px 34px 0 0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:18px 18px calc(var(--sb) + 30px);transform:translateY(100%);
+    transition:transform .34s cubic-bezier(.2,.9,.25,1)}
+  .scrim.show .sheet{transform:none}
+  .sheet.short{top:auto;max-height:80%}
+  .grab{width:36px;height:5px;border-radius:3px;background:#5a5a5e;margin:-8px auto 6px}
+  .sheet .ok{float:right;height:45px;padding:0 19px;border-radius:999px;font-size:17px;font-weight:600;
+    background:#2c2c2e;border:1px solid rgba(255,255,255,.1)}
+  .sheet h2{clear:both;font-size:34px;font-weight:700;letter-spacing:.2px;margin:0;padding:22px 2px 0}
+  .sec{color:#8d8d93;font-size:17px;font-weight:600;margin:24px 2px 12px}
+  .group{background:var(--cell);border-radius:26px;padding:0 18px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;
+    font-size:17px;border-bottom:.5px solid var(--sep)}
+  .row:last-child{border-bottom:0}
+  .row .v{color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.link{color:var(--blue)} .row.danger{color:var(--danger)}
+  .row .pc{display:flex;align-items:center;gap:12px;font-size:17px}
+  .row .pc .dot{width:11px;height:11px;border-radius:50%;background:var(--green)}
+  .row .pc .dot.off{background:#8e8e93}
+  .row .sm{font-size:13px;color:var(--muted)}
+  .note{color:var(--muted);font-size:13px;line-height:1.45;padding:12px 0 16px;
+    border-top:.5px solid var(--sep)}
+  .group .note:first-child{border-top:0}
+
+  #airRemote{position:absolute;z-index:6;right:14px;top:calc(var(--st) + 82px);width:82px;
+    padding:9px 8px 10px;border-radius:20px;display:flex;flex-direction:column;gap:8px;
+    background:linear-gradient(160deg,#3a3b40,#16171a 60%);border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 26px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+  #airRemote .lcd{border-radius:9px;padding:5px 7px 6px;color:#0d2236;
+    background:linear-gradient(#bfe6f6,#8fcbe6);box-shadow:inset 0 2px 5px rgba(0,0,0,.45);
+    font:600 11px/1.25 ui-monospace,Menlo,Consolas,monospace}
+  #airRemote .lcdTop{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.8px;
+    border-bottom:1px solid rgba(13,34,54,.25);padding-bottom:2px;margin-bottom:2px}
+  #airRemote .lcdRow{display:flex;justify-content:space-between;align-items:baseline}
+  #airRemote .lcdRow b{font-size:15px}
+  #airRemote .ab{height:66px;border-radius:14px;color:#e9e9ee;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;
+    background:linear-gradient(#2b2c31,#101114);border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 3px 0 #050506,inset 0 1px 0 rgba(255,255,255,.08)}
+  #airRemote .ab svg{width:26px;height:26px}
+  #airRemote .ab span{font-size:11px;font-weight:800;letter-spacing:1.2px}
+  #airRemote .ab:active{transform:translateY(2px);box-shadow:0 1px 0 #050506}
+  #airRemote .ab.on{color:var(--orange);border-color:rgba(245,158,59,.55)}
+  #airRemote.busy .lcd{animation:airblink .6s steps(2) infinite}
+  @keyframes airblink{50%{filter:brightness(1.18)}}
+
+  #btnVista{position:absolute;z-index:6;left:18px;top:calc(var(--st) + 82px)}
+  #btnVista svg{width:26px;height:26px}
+  .vstatus{color:var(--muted);font-size:14px;margin:4px 2px 4px;min-height:20px}
+  .vstatus.bad{color:var(--orange)}
+  .vgroup{color:#8d8d93;font-size:15px;font-weight:600;margin:18px 2px 10px}
+  .vtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .vtile{min-height:64px;border-radius:16px;border:1px solid rgba(255,255,255,.08);
+    background:var(--cell);color:var(--txt);font-size:14px;font-weight:600;padding:8px 6px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center}
+  .vtile .k{font-size:10.5px;font-weight:600;color:var(--muted);letter-spacing:.3px}
+  .vtile:active{transform:scale(.97);background:#3a3a3c}
+  .vtile.flash{border-color:var(--orange);color:var(--orange)}
+  .vtile.off{opacity:.38}
+  .vempty{color:var(--muted);font-size:14px;line-height:1.5;margin-top:18px}
+
+  .seg{display:flex;background:#1c1c1e;border-radius:9px;padding:2px;gap:2px}
+  .seg button{border:0;background:none;color:var(--txt);font-size:13px;font-weight:600;
+    padding:6px 9px;border-radius:7px}
+  .seg button.on{background:#636366}
+
+  .sw{width:51px;height:31px;border-radius:999px;background:#39393d;position:relative;flex:none;
+    transition:background .2s}
+  .sw.on{background:var(--green)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;
+    background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:transform .2s}
+  .sw.on::after{transform:translateX(20px)}
+  .row input[type=range]{width:100%;accent-color:var(--orange)}
+  .rec{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;
+    border-bottom:.5px solid var(--sep);color:inherit;text-decoration:none}
+  .rec:last-child{border-bottom:0}
+  .rec .n{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec .m{font-size:13px;color:var(--muted);flex:none}
+  .empty{color:var(--muted);font-size:15px;padding:18px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<section id="pair">
+  <img class="logo" src="/static/fh6_logo.png" alt="Forza Horizon 6" />
+  <div class="card">
+    <h1>Pair with HorizonLens</h1>
+    <p>Enter the code shown in HorizonLens on your PC, or scan its QR code.</p>
+    <input id="codeInput" maxlength="9" placeholder="XXXXXXXX" autocomplete="off"
+           autocapitalize="characters" spellcheck="false" />
+    <button id="pairBtn" class="press">Pair</button>
+    <div id="pairErr"></div>
+    <p class="fine">Motion access turns this phone into the game camera.
+      Video stays on your local network.</p>
+  </div>
+</section>
+
+<section id="live" class="hidden">
+  <video id="video" autoplay playsinline muted></video>
+
+  <div id="waiting">
+    <img src="/static/fh6_logo.png" alt="Forza Horizon 6" />
+    <h2>Waiting for Forza to leave the garage</h2>
+    <p>HorizonLens will take the camera automatically as soon as it is available.</p>
+  </div>
+
+  <button id="btnHide" class="round glass press hidden" aria-label="Hide controls">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <g class="open"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g>
+      <g class="shut"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></g>
+    </svg>
+  </button>
+
+  <div id="status" class="glass"><span class="led"></span><span id="statusText">Waiting for Forza</span></div>
+
+  <button id="btnSettings" class="round glass press" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+      <path d="M10.3 2.6h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.7c.1.6.1 1.3 0 1.9l2 1.7-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.7a6 6 0 0 1 0-1.9l-2-1.7 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9z"/>
+      <circle cx="12" cy="12" r="3.1"/>
+    </svg>
+  </button>
+
+  <button id="runBadge" class="round glass press hidden" aria-label="Run on">
+    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="14.5" cy="3.8" r="2"/><path d="M8.4 22l1.7-5.6 2.4 2.2V22h2v-4.3l-2.6-2.5.8-3.6c1 1.2 2.6 2 4.3 2v-2c-1.4 0-2.6-.7-3.2-1.8l-1-1.6a2.1 2.1 0 0 0-2.6-.8L5.6 9.3V13h2v-2.5l1.9-.8L6.3 22z"/></svg>
+  </button>
+
+  <div id="reticle">
+    <svg viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round">
+      <path d="M2 9V4a2 2 0 0 1 2-2h5M19 2h5a2 2 0 0 1 2 2v5M26 19v5a2 2 0 0 1-2 2h-5M9 26H4a2 2 0 0 1-2-2v-5"/>
+    </svg>
+    <span id="zoomLabel" class="glass">1.0×</span>
+  </div>
+
+  <div id="carControls">
+    <div id="heightCar" class="height glass">
+      <span class="chev"><svg viewBox="0 0 24 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg></span>
+      <div class="track"><div class="knob"></div></div>
+      <span class="chev"><svg viewBox="0 0 24 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 7 12 14 19 7"/></svg></span>
+      <span class="lab">HEIGHT</span>
+    </div>
+    <div id="padCar" class="pad">
+      <span class="ar u"></span><span class="ar d"></span><span class="ar l"></span><span class="ar r"></span>
+      <div class="knob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M12 3.5 18.5 20 12 15.6 5.5 20z"/></svg></div>
+    </div>
+    <button id="btnSave" class="glass press" aria-label="Save preset">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7H6.5A2.5 2.5 0 0 0 4 9.5v9A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-9A2.5 2.5 0 0 0 17.5 7H16"/><path d="M12 2v12M8.5 10.5 12 14l3.5-3.5"/></svg>
+      <span class="t">SAVE</span><span class="s" id="saveName">PASSENGER</span>
+    </button>
+  </div>
+  <div id="carRow">
+    <div id="presetRow"><div id="presetTrack"></div></div>
+    <button id="btnAdjust" class="round glass press" aria-label="Adjust framing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.3" fill="#1c1c1e"/><circle cx="8" cy="12" r="2.3" fill="#1c1c1e"/><circle cx="16" cy="18" r="2.3" fill="#1c1c1e"/></svg>
+    </button>
+  </div>
+
+  <div id="freeControls">
+    <div id="padFree" class="pad">
+      <span class="ar u"></span><span class="ar d"></span><span class="ar l"></span><span class="ar r"></span>
+      <div class="knob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M12 3.5 18.5 20 12 15.6 5.5 20z"/></svg></div>
+    </div>
+    <div id="heightFree" class="height glass">
+      <span class="chev"><svg viewBox="0 0 24 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg></span>
+      <div class="track"><div class="knob"></div></div>
+      <span class="chev"><svg viewBox="0 0 24 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 7 12 14 19 7"/></svg></span>
+      <span class="lab">HEIGHT</span>
+    </div>
+  </div>
+
+  <button id="btnRecord" class="press" aria-label="Record"><span class="fill"></span></button>
+  <button id="btnGrid" class="round glass press" aria-label="Camera options">
+    <svg viewBox="0 0 26 26" fill="currentColor"><circle cx="5" cy="8.5" r="2.7"/><circle cx="13" cy="8.5" r="2.7"/><circle cx="21" cy="8.5" r="2.7"/><circle cx="5" cy="17.5" r="2.7"/><circle cx="13" cy="17.5" r="2.7"/><circle cx="21" cy="17.5" r="2.7"/></svg>
+  </button>
+
+  <button id="btnGallery" class="round glass press" aria-label="Recordings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="6.5" y="7.5" width="15" height="12" rx="2.2"/><path d="M4.5 16.5h-.2A1.8 1.8 0 0 1 2.5 14.7V6.3A1.8 1.8 0 0 1 4.3 4.5h11.4a1.8 1.8 0 0 1 1.8 1.8"/><circle cx="11" cy="11.6" r="1.5" fill="currentColor" stroke="none"/><path d="M6.5 18.2l4.3-3.8 2.5 2.2 3.2-3 5 4.4" stroke-linecap="round"/></svg>
+  </button>
+  <div id="viewToggle" class="glass">
+    <button id="tabCar" class="active">CAR VIEW</button>
+    <button id="tabFree">FREECAM</button>
+  </div>
+  <button id="btnRecenter" class="round glass press" aria-label="Recenter">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a8 8 0 1 1-7.6 5.5"/><path d="M12 1.5v6l-3.5-3z" fill="currentColor"/></svg>
+  </button>
+
+  <button id="btnVista" class="round glass press hidden" aria-label="Forza Vista">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M3.5 15.5v-3l2.2-4.6A2 2 0 0 1 7.5 6.8h9a2 2 0 0 1 1.8 1.1l2.2 4.6v3a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/>
+      <path d="M3.8 12.4h16.4"/><circle cx="7.3" cy="16.6" r="1.6"/><circle cx="16.7" cy="16.6" r="1.6"/>
+    </svg>
+  </button>
+
+  <div id="airRemote" class="hidden" aria-label="Air suspension">
+    <div class="lcd">
+      <div class="lcdTop"><span>AIR</span><span id="airSt">--</span></div>
+      <div class="lcdRow"><span>F</span><b id="airF">--</b></div>
+      <div class="lcdRow"><span>R</span><b id="airR">--</b></div>
+    </div>
+    <button id="airUp" class="ab press" aria-label="Air up">
+      <svg viewBox="0 0 24 24"><path d="M12 5 20 16H4z" fill="currentColor"/></svg><span>UP</span>
+    </button>
+    <button id="airDown" class="ab press" aria-label="Air down">
+      <svg viewBox="0 0 24 24"><path d="M12 19 4 8h16z" fill="currentColor"/></svg><span>DOWN</span>
+    </button>
+  </div>
+
+  <div id="zoomRail" class="glass hidden" aria-label="Zoom">
+    <span class="cap">3×</span>
+    <div class="track"><div class="knob"></div></div>
+    <span class="cap">0.5×</span>
+  </div>
+
+  <button id="btnLock" class="round glass press hidden" aria-label="Lock camera direction">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/>
+      <path class="open" d="M8 10.5V7.2a4 4 0 0 1 7.6-1.7"/>
+      <path class="shut" d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+    </svg>
+  </button>
+
+  <div id="gapBadge" class="glass hidden"><span class="dot"></span><span id="gapBadgeText">STATIC</span></div>
+
+  <div id="toast" class="glass"></div>
+</section>
+
+<div id="settings" class="scrim"><div class="sheet"><div class="grab"></div>
+  <button class="ok press" data-close>OK</button>
+  <h2>Settings</h2>
+
+  <div class="sec">Appearance</div>
+  <div class="group">
+    <div class="row">Liquid Glass <span id="swGlass" class="sw on"></span></div>
+    <div class="note">Turn off animated glass effects to use simple controls.
+      Video quality and recording are unchanged.</div>
+    <div class="row">Hide Button <span id="swHideBtn" class="sw"></span></div>
+    <div class="note">Adds an eye button to the top left of the camera screen. Tap it to
+      hide every button and control so only the picture is left; the phone still moves
+      the camera and pinching still zooms. Tap it again to bring everything back.</div>
+  </div>
+
+  <div class="sec">Recording</div>
+  <div class="group">
+    <div class="row">Quality <span class="seg" id="recQuality">
+      <button data-v="standard">Standard</button><button data-v="high">High</button><button data-v="max">Max</button></span></div>
+    <div class="note">Standard records the live view as it is. High and Max record the
+      same shot through their own capture on the PC, much sharper: High at 1080×1920
+      (24 Mbps), Max at your game's full resolution (at least 1080×1920, 50 Mbps). The
+      live view on this phone stays the same, so Wi-Fi isn't affected. For even more detail,
+      run the game at a higher resolution (NVIDIA DSR / DLDSR). On PCs where that capture
+      can't run, High and Max raise the live view's quality instead.</div>
+  </div>
+
+  <div class="sec">Gap Cam</div>
+  <div class="group">
+    <div class="row">Static Gap Cam <span id="swGapStatic" class="sw"></span></div>
+    <div class="note">Locks the GAP camera where it's pointing now, so moving the phone
+      no longer moves it and you can set the phone down and drive. The stick and HEIGHT
+      still move it, and Recenter points it straight ahead. Only in Car View › GAP.</div>
+    <div id="gapLockRow" class="hidden">
+      <div class="row link" id="gapLock">Lock to where the phone points now</div>
+      <div class="note">Or tap the STATIC badge on the camera screen.</div>
+    </div>
+  </div>
+  <div id="gapMore" class="hidden">
+    <div class="group" style="margin-top:12px">
+      <div class="row">Dynamic Gap Cam <span id="swGapDynamic" class="sw"></span></div>
+      <div class="note">Zooms out the faster you go, easing smoothly. Past 0.5× the camera
+        pulls back instead, since the game can't go wider. Pinch zoom sets the parked zoom.</div>
+      <div id="gapDynMore" class="hidden">
+        <div class="row">Starts at <span class="v" id="gapStartV">100 mph</span></div>
+        <div class="row"><input id="gapStart" type="range" min="40" max="200" step="5" value="100" /></div>
+        <div class="row">Zoom out to <span class="v" id="gapOutV">0.30× at 250 mph</span></div>
+        <div class="row"><input id="gapOut" type="range" min="0.3" max="0.9" step="0.05" value="0.3" /></div>
+        <div class="note">Below "Starts at" the camera keeps your zoom. Then it widens smoothly
+          until it reaches "Zoom out to" (times your zoom) at 250 mph.</div>
+      </div>
+    </div>
+    <div class="group" style="margin-top:12px">
+      <div class="row">Player Tracking <span id="swGapTrack" class="sw"></span></div>
+      <div class="note">The locked camera turns to follow the nearest other player driving
+        near you, then eases back to where you locked it. AI traffic and parked cars are
+        ignored. Best in an online session.</div>
+      <div id="gapTrackMore" class="hidden">
+        <div class="row">Track cars within <span class="v" id="gapRangeV">60 m</span></div>
+        <div class="row"><input id="gapRange" type="range" min="5" max="200" step="5" value="60" /></div>
+        <div class="row">Smoothness <span class="seg" id="gapSmooth">
+          <button data-v="low">Low</button><button data-v="medium">Medium</button><button data-v="high">High</button></span></div>
+        <div class="note">How close a car has to get before the camera follows it (it keeps
+          following a little further out), and how gently the camera turns: High is the
+          calmest, Low reacts fastest.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Air Suspension</div>
+  <div class="group">
+    <div class="row">Air Suspension <span id="swAir" class="sw"></span></div>
+    <div class="note" id="airIntro">Raise and drop your car like air ride. Turning it on adds an
+      UP / DOWN air remote to the camera screen. Turning it off puts the car back to stock.</div>
+  </div>
+  <div id="airMore" class="hidden">
+    <div class="sec">Ride Height</div>
+    <div class="group">
+      <div class="row">Front <span class="v" id="airFrontV">0%</span></div>
+      <div class="row"><input id="airFront" type="range" min="-90" max="50" step="1" value="0" /></div>
+      <div class="row">Rear <span class="v" id="airRearV">0%</span></div>
+      <div class="row"><input id="airRear" type="range" min="-90" max="50" step="1" value="0" /></div>
+      <div class="note">The UP height, per axle, as a share of the car's normal ride height.
+        0% is stock.</div>
+    </div>
+    <div class="sec">Drop</div>
+    <div class="group">
+      <div class="row">Drop Amount <span class="v" id="airDropV">60%</span></div>
+      <div class="row"><input id="airDrop" type="range" min="0" max="90" step="1" value="60" /></div>
+      <div class="row">Lowest Point <span class="v" id="airFloorV">15%</span></div>
+      <div class="row"><input id="airFloor" type="range" min="0" max="90" step="1" value="15" /></div>
+      <div class="row">Speed <span class="v" id="airSpeedV">2.5 s</span></div>
+      <div class="row"><input id="airSpeed" type="range" min="0.3" max="8" step="0.1" value="2.5" /></div>
+      <div class="row">Order <span class="seg" id="airSeq">
+        <button data-v="together">Both</button><button data-v="front">Front</button><button data-v="rear">Rear</button></span></div>
+      <div class="note">How far DOWN drops, the lowest any wheel may sit (raise it if the car
+        scrapes or bounces), how long a move takes, and which axle moves first. UP plays the
+        order in reverse.</div>
+    </div>
+    <div class="sec">Air Camber</div>
+    <div class="group">
+      <div class="row">Air Camber <span id="swAirCamber" class="sw"></span></div>
+      <div id="airCamberMore" class="hidden">
+        <div class="row">Front, lowered <span class="v" id="airCamFV">-6.0°</span></div>
+        <div class="row"><input id="airCamF" type="range" min="-20" max="20" step="0.5" value="-6" /></div>
+        <div class="row">Rear, lowered <span class="v" id="airCamRV">-6.0°</span></div>
+        <div class="row"><input id="airCamR" type="range" min="-20" max="20" step="0.5" value="-6" /></div>
+        <div class="row">Motion <span class="seg" id="airCurve">
+          <button data-v="smooth">Smooth</button><button data-v="linear">Even</button><button data-v="early">Early</button><button data-v="late">Late</button></span></div>
+      </div>
+      <div class="note">Tilts the wheels in as the car drops (negative is top-in) and back to
+        stock on the way up. Motion shapes how the tilt follows the drop.</div>
+    </div>
+    <div class="sec">Remote</div>
+    <div class="group">
+      <div class="row">Air Sounds <span id="swAirSound" class="sw on"></span></div>
+      <div class="note">Plays the air and slam sounds on this phone when you press UP or DOWN.</div>
+    </div>
+  </div>
+
+  <div class="sec">Forza Vista</div>
+  <div class="group">
+    <div class="row">Forza Vista Remote <span id="swVista" class="sw"></span></div>
+    <div class="note">Open doors, panels and windows and switch lights from this phone. Uses
+      Forzavista, a separate free app that runs next to the game on the PC.</div>
+  </div>
+  <div id="vistaMore" class="hidden">
+    <div class="group" style="margin-top:12px">
+      <div class="row">Forzavista <span class="v" id="vistaRun">Checking…</span></div>
+      <div class="row">Ready buttons <span class="v" id="vistaReady">—</span></div>
+      <div class="row link" id="vistaSetup">Set up key bindings for me</div>
+      <div class="note">HorizonLens presses Forzavista's own key bindings. Set up gives every
+        unbound action a spare key (F13–F24, not on real keyboards); close Forzavista first,
+        then start it again. Forza has to be the active window on the PC.</div>
+    </div>
+    <div class="sec">Buttons on the remote</div>
+    <div class="group">
+      <div class="row">Doors &amp; panels <span class="sw vg" data-g="panels"></span></div>
+      <div class="row">Windows <span class="sw vg" data-g="windows"></span></div>
+      <div class="row">Lights <span class="sw vg" data-g="lights"></span></div>
+      <div class="row">Explode, reset, detail, ignition <span class="sw vg" data-g="car"></span></div>
+      <div class="note">DRL colors, RGB cycle, strobe, fade and presets aren't key-bindable in
+        Forzavista, so use its own window for those.</div>
+    </div>
+  </div>
+
+  <div class="sec">Paired PC</div>
+  <div class="group">
+    <div class="row"><span class="pc"><span id="pcDot" class="dot"></span><span id="setPcName">This PC</span></span>
+      <span id="pcState" class="sm">PC Receiving Camera Data</span></div>
+    <div class="row">HorizonLens Hub ID <span class="v" id="setHubId">—</span></div>
+    <div class="row link" id="setPairAgain">Pair again or add a PC</div>
+    <div class="row danger" id="setForget">Forget this PC</div>
+    <div class="note">Forgetting this PC removes its pairing from this phone.
+      Pair again from HorizonLens to reconnect.</div>
+  </div>
+
+  <div class="sec">Connection</div>
+  <div class="group">
+    <div class="row">Network <span class="v">Local Wi-Fi</span></div>
+    <div class="row">Live View <span class="v" id="setVideo">Waiting</span></div>
+    <div class="row">Tracking <span class="v" id="setTracking">Rotation only</span></div>
+    <div class="row">Game <span class="v" id="setGame">Forza Horizon 6</span></div>
+  </div>
+</div></div>
+
+<div id="options" class="scrim"><div class="sheet short"><div class="grab"></div>
+  <button class="ok press" data-close>OK</button>
+  <h2>Camera</h2>
+
+  <div class="sec">Lens</div>
+  <div class="group">
+    <div class="row">Zoom <span class="v" id="optZoomV">1.0×</span></div>
+    <div class="row"><input id="optZoom" type="range" min="0.5" max="3" step="0.01" value="1" /></div>
+    <div class="row">Zoom Slider on Screen <span class="sw" data-opt="zoomRail"></span></div>
+    <div class="row">Field of View <span class="v" id="optFovV">70°</span></div>
+    <div class="row"><input id="optFov" type="range" min="50" max="100" step="1" value="70" /></div>
+    <div class="note">Zoom Slider puts a zoom slider beside the picture (drag it, or
+      double-tap it for 1×); pinching still works. Field of View is how wide the view is at
+      1× zoom: raise it if the picture feels too zoomed in.</div>
+  </div>
+
+  <div class="sec hidden" id="arSec">Tracking</div>
+  <div class="group hidden" id="arGroup">
+    <div class="row" id="arRow">Position Tracking (AR) <span class="sw" id="swAR"></span></div>
+    <div class="row">Movement Scale <span class="v" id="optMoveV">1.50×</span></div>
+    <div class="row"><input id="optMove" type="range" min="0.25" max="5" step="0.05" value="1.5" /></div>
+    <div class="note">Walk, lean and crouch to move the camera (AR tracking with the
+      phone's rear camera). Movement Scale sets how far the camera moves for each
+      metre you move: above 1× covers more ground, below 1× gives finer moves.
+      Point the back of the phone at a lit room. Recenter sets where you stand as
+      the starting point.</div>
+  </div>
+
+  <div class="sec">Freecam</div>
+  <div class="group">
+    <div class="row">Run <span class="sw" data-opt="run"></span></div>
+    <div class="row">Steadycam <span class="sw" data-opt="steadycam"></span></div>
+    <div class="row">Drone Inertia <span class="sw" data-opt="drone"></span></div>
+    <div class="row">Stand Up Automatically <span class="sw" data-opt="standUp"></span></div>
+    <div class="row">Ignore Ground Height <span class="sw" data-opt="ignoreGround"></span></div>
+    <div class="note">Run moves faster. Steadycam smooths the shot and turns off
+      walking and vehicle motion effects. Drone Inertia lets Freecam glide.</div>
+  </div>
+
+  <div class="sec">Motion FX</div>
+  <div class="group">
+    <div class="row">Vehicle Motion <span class="sw" data-opt="motionFx"></span></div>
+    <div class="row">Walking <span class="sw" data-opt="walkingFx"></span></div>
+    <div class="note">Adds g-force, bumps, breathing and sway in Car View, and a
+      walking step in Freecam. Off keeps a still phone perfectly still.</div>
+  </div>
+</div></div>
+
+<div id="vista" class="scrim"><div class="sheet short"><div class="grab"></div>
+  <button class="ok press" data-close>OK</button>
+  <h2>Forza Vista</h2>
+  <div class="vstatus" id="vistaStatus">Checking Forzavista…</div>
+  <div id="vistaGrid"></div>
+</div></div>
+
+<div id="gallery" class="scrim"><div class="sheet short"><div class="grab"></div>
+  <button class="ok press" data-close>OK</button>
+  <h2>Recordings</h2>
+  <div class="sec">Saved on the PC</div>
+  <div class="group" id="recList"><div class="empty">Loading…</div></div>
+</div></div>
+
+<script src="/static/tracking.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

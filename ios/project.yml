@@ -1,0 +1,57 @@
+name: HorizonLens
+options:
+  bundleIdPrefix: app.horizonlens
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  HorizonLens:
+    type: application
+    platform: iOS
+    sources:
+      - HorizonLens
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.horizonlens.camera
+        PRODUCT_NAME: HorizonLens
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: HorizonLens/Info.plist
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+    info:
+      path: HorizonLens/Info.plist
+      properties:
+        CFBundleDisplayName: HorizonLens
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UIStatusBarHidden: true
+        UIRequiresFullScreen: true
+        UIRequiredDeviceCapabilities: [arm64, arkit]
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSCameraUsageDescription: >-
+          HorizonLens uses the camera for ARKit tracking only, so the game
+          camera follows how you move and turn the phone. It also scans the
+          pairing QR code. Nothing is recorded or sent.
+        NSLocalNetworkUsageDescription: >-
+          HorizonLens connects to the HorizonLens app on your PC over your
+          Wi-Fi for the live view and camera control.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        CFBundleURLTypes:
+          - CFBundleURLName: app.horizonlens.camera
+            CFBundleURLSchemes: [horizonlens]

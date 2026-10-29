@@ -1,0 +1,6 @@
+PySide6>=6.6
+aiohttp>=3.9
+cryptography>=42  # HTTPS certificate: iPhones only give motion data to https pages
+qrcode[pil]>=7.4
+# cv2/numpy only needed if we add PC-side tracking later; browser does MediaPipe.
+PyAudioWPatch>=0.2.12

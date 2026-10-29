@@ -1,0 +1,240 @@
+HorizonLens 1.0.0
+=================
+
+Use your phone as a hand-held camera inside Forza Horizon 6, with the game
+streamed live to the phone and recordings saved on your PC.
+
+- Car View presets (Passenger, Driver, Window, Bumper, Wheel, GAP) and a
+  Freecam you walk around with the stick, height control and zoom.
+- Position tracking: Android phones with ARCore, and the iPhone app (ARKit).
+- Gap Cam: Static (put the phone down and drive), Dynamic (zooms out with
+  speed) and Player Tracking (follows other players near you).
+- Lock for dolly shots, an on-screen zoom slider and a Hide button for a
+  clean screen.
+- Recording on the PC with game sound, up to the game's full resolution.
+- A cinematic sequencer inside the game, air suspension and a Forza Vista
+  remote.
+
+HorizonLens is a fan-made tool. It is not made, endorsed or supported by
+Microsoft, Xbox Game Studios or Playground Games. It loads a camera module
+into the game to move the camera: use it at your own risk.
+
+WHAT YOU NEED
+- Windows 10 or 11, 64-bit
+- Forza Horizon 6 on Steam or the Microsoft Store (Xbox app / Game Pass)
+- A phone on the same Wi-Fi as the PC: iPhone (Safari) or Android (Chrome)
+- Any recent NVIDIA, AMD or Intel graphics card. NVIDIA sends the game
+  straight from its GPU frames; AMD and Intel use window capture.
+
+SET UP
+1. Unzip this folder anywhere (for example your Desktop). Keep every file
+   together; HorizonLens.exe needs the _internal folder next to it.
+2. Run Allow-Firewall.bat once (it asks for administrator rights). This
+   lets your phone reach the PC. Your Wi-Fi must be set to Private in
+   Windows Settings > Network & internet.
+3. Run HorizonLens.exe. If Windows SmartScreen appears, choose
+   More info > Run anyway.
+
+   Antivirus: HorizonLens loads a small camera module into the game, which
+   some antivirus tools flag. If HorizonLens.exe or files in _internal
+   disappear, add the HorizonLens folder as an exclusion and unzip again.
+
+USE IT
+1. Start Forza Horizon 6 (or press Launch game) and get into free roam.
+   Only the game is captured, never your desktop.
+2. Press Start. A QR code appears. HorizonLens takes the game camera on its
+   own once you're driving; "Camera control" turns green.
+3. Scan the QR code with your phone's camera. The first time, the browser
+   warns about the certificate: on iPhone tap Show Details, then visit this
+   website; on Android tap Advanced, then Proceed.
+4. Tap Tap to Start and allow Motion & Orientation access. On Android,
+   also allow the camera for AR when Chrome asks (see POSITION TRACKING).
+5. Point the phone. Tap the round arrow (bottom right) to recenter.
+
+ON THE PHONE
+- CAR VIEW: Passenger, Driver, Window, Bumper, Wheel and GAP (a fishbowl
+  camera behind the car) views. Move a view with the stick (it walks toward
+  where the phone points) and HEIGHT, then tap SAVE to keep it.
+- GAP: pinch out past 0.5x for an extra-wide view. Each wide step takes a
+  second to switch.
+- Settings > Gap Cam > Static Gap Cam: GAP locks where it points, so you can
+  put the phone down and drive. The stick and HEIGHT still move it; Recenter
+  points it straight ahead. A STATIC badge shows while it's on: tap it (or
+  "Lock to where the phone points now" in Settings) to lock it again where
+  the phone points, without switching it off and on.
+- Dynamic Gap Cam (appears under Static Gap Cam): the lens widens with speed,
+  easing smoothly. By default it keeps your zoom up to 100 mph and reaches
+  0.3x of it at 250 mph; "Starts at" and "Zoom out to" change both. Past 0.5x
+  the camera pulls back instead (the game can't go wider). Pinch zoom sets
+  the parked zoom.
+- Player Tracking (appears under Static Gap Cam): the locked camera turns to
+  follow the nearest other player driving near you, then eases back to where
+  you locked it. AI traffic and parked cars are ignored. Best in an online
+  session. "Track cars within" sets how close a car must get (5 to 200 m,
+  60 m by default); Smoothness sets how gently the camera turns. The STATIC
+  badge shows which car it follows and how far away it is.
+- FREECAM: walk around the car with the stick and HEIGHT.
+- Zoom: pinch, or drag the zoom slider at the side of the screen (double-tap
+  it for 1x).
+- Lock (padlock button): the camera holds its place and direction, so
+  moving, turning or walking with the phone no longer moves it; the stick
+  and HEIGHT still move it in a straight line, for dolly and slider shots. A LOCKED badge
+  shows; tap it to re-aim where the phone points, Recenter points it
+  straight ahead, tap the padlock again to unlock.
+- The ... button: zoom, zoom slider, Run, Steadycam, Drone Inertia, motion
+  effects (Walking adds a realistic walking step in Freecam).
+- The red button records on the PC (in Videos\HorizonLens), with game sound,
+  showing exactly what the phone shows. The photos button lists and downloads
+  recordings. Settings > Recording > Quality: Standard records the live
+  view; High (1080x1920, 24 Mbps) and Max (the game's full resolution,
+  50 Mbps) record the same shot through their own capture on the PC, much
+  sharper, without touching the live view. Portrait recordings are a 9:16
+  slice of the game screen, so a higher game resolution (or NVIDIA DSR /
+  DLDSR) gives them more real detail.
+- Hide button: Settings > Appearance > Hide Button adds an eye button (top
+  left). Tap it to hide every control so only the picture is left; tap it
+  again to bring them back.
+
+CINEMATIC SEQUENCER (in-game menu)
+- Desktop app > Sequencer > "Open in-game sequencer". The menu appears inside
+  Forza's picture. Forza must NOT be in fullscreen: in Forza open
+  Settings > Video and turn Fullscreen off (HorizonLens shows a warning card
+  if it is on). F8 opens / closes the menu. HorizonLens recordings never
+  include it; for OBS or screenshots use "Hide for shot".
+- No camera control yet? Press "Take camera" in the menu (it presses Start
+  for you if HorizonLens isn't started).
+- The menu never takes focus from Forza, so the game keeps drawing behind
+  it. To type in a field, click it, type, press Enter (Esc cancels). Your
+  keys go to the field, not the car, until then.
+- Closing the HorizonLens window closes the sequencer too and gives the
+  camera back to the game.
+- The menu shows what to do next in orange under the timeline, and what
+  the camera is doing at the top (CAMERA: GAME / PREVIEW / FLYING /
+  PLAYING).
+- Fly (F2 or the Fly button): arrow keys move, Page Up / Page Down go up /
+  down, hold the right mouse button to look, mouse wheel = speed, Shift
+  fast, Ctrl slow, + / - zoom. Fly stays on until you press F2 again: it
+  keeps going while you edit, and comes back after you play.
+  While flying your keys move the camera, not the car.
+- F9 sets a key at the playhead, exactly what the camera shows (position,
+  angle and zoom). The playhead then moves on by the key spacing, so: fly,
+  F9, fly, F9 ... Click a key (or F3 / F4) to go back to it; F9 there
+  updates it. F6 plays, F7 stops and gives the camera back.
+- "Hide" clears the screen for filming; "Clean play" hides everything and
+  plays from the start. F8 brings the menu back.
+- Shots "Stay in place" (the camera keeps its spot in the world, even if the
+  car drives off) or "Follow the car" (the camera rides along with it).
+  Switch any time; the keys stay. Length, key spacing, ease in / out, a
+  smooth or straight path, "Even speed". Undo / Redo, Library. "Key list"
+  shows every key as a table.
+- Timeline, like CapCut: click a shot to select it (white frame). Drag its
+  left or right edge to trim it, drag the shot itself to move it before or
+  after the others. "Split" (or right-click > Split at the playhead) cuts a
+  shot in two; the camera move carries on smoothly across the cut. Keys
+  trimmed off show greyed in the table. Mouse wheel zooms the timeline.
+- Zoom: each key has a zoom (0.5x to 3x, the same as the phone's zoom).
+  While flying, + / - zoom and F9 keys it. Otherwise the Zoom slider sets
+  the selected key's zoom. You can also type it in the table.
+- Tracks: put the playhead where something should happen and press
+  "+ Keyframe". Every track has its own colour under the shots.
+- Zoom track: "+ Keyframe > Zoom keyframe" uses the Zoom slider's value.
+  The camera eases from the zoom before to the new one (time and curve in
+  Settings). Select a Zoom keyframe and move the Zoom slider to change it.
+  Before the first Zoom keyframe the keys' own zoom is used.
+- Air suspension track: the 1st Air keyframe drops the car, the 2nd raises
+  it, and so on. The lane draws the ride height (front solid, rear dashed).
+  Settings: drop, raised heights, lowest point, time, axle order, height
+  curve, and camber control (camber angles + camber curve) on or off.
+  When the sequencer stops the car goes back to stock (or to the phone's
+  air setting), unless you turn that off. Don't run Neptune's air ride at
+  the same time. The phone's air remote shows SEQ while the sequencer
+  drives the car.
+- Settings (gear button in the menu) holds every option of each track and
+  is saved with the sequence. Drag the dots of a curve graph to shape a
+  move, or pick Smooth / Linear / Fast start / Slow start / Slam.
+- Forzavista tracks (needs Forzavista running, see FORZA VISTA REMOTE): put
+  the playhead where it should happen, "+ Keyframe" and pick e.g. Hood.
+  The first Hood trigger opens it, the second closes it, the third opens it
+  again, and so on. Each action has its own coloured track: a filled dot
+  turns it on, a hollow dot turns it off. Drag a dot to move it,
+  right-click it to delete. Scrub before a trigger and the car goes back to
+  default. "Reset car" puts the car back to stock before a take; in
+  Settings you can have Clean play do that for you every time.
+  Forzavista key bindings can be any keys, even the sequencer's F-keys.
+- When HorizonLens takes the camera, the game shows the driver's seat view
+  for a moment: the camera module measures the car there before it can
+  place the camera.
+
+AIR SUSPENSION
+- Settings (gear button) > Air Suspension. Off by default. Turn it on and an
+  air remote appears on the camera screen: DOWN drops the car, UP raises it.
+- All its settings are in the same place: ride height front/rear, drop
+  amount, lowest point, speed, which axle moves first, and Air Camber (the
+  wheels tilt in as the car drops, back to stock on the way up).
+- Turning it off, changing car or closing HorizonLens puts the car back to
+  stock. Don't run Neptune's air ride at the same time.
+
+FORZA VISTA REMOTE
+- Open doors, hood, trunk, roof, windows and more, and switch lights, from
+  the phone. Uses Forzavista (a separate free app by HTTPJXRDN, from
+  github.com/HTTPJXRDN/FH6-Forzavista) running next to the game.
+- Settings (gear button) > Forza Vista. Off by default. Turn it on, pick
+  which groups of buttons you want, and a car button appears on the camera
+  screen that opens the remote.
+- HorizonLens presses Forzavista's own key bindings. Tap "Set up key
+  bindings for me" (with Forzavista closed) to give every action a spare
+  key, then start Forzavista. Forza must be the active window on the PC.
+- DRL colors, RGB, strobe, fade and presets aren't key-bindable in
+  Forzavista, so use its own window for those.
+
+POSITION TRACKING (ANDROID)
+- On Android phones that support Google Play Services for AR, the camera
+  also follows where you walk, lean and crouch, not only where you point.
+  Chrome asks for the camera the first time: the rear camera is used for
+  tracking only, nothing is recorded or sent.
+- Point the back of the phone at a lit room with some detail (not a blank
+  wall). Tap recenter to make where you stand the starting point.
+- Turn it off or back on in the ... button > Tracking. Phones without AR
+  support track rotation only.
+- Movement Scale (... button > Tracking) sets how far the camera moves per
+  metre you walk: 1.5x by default, up to 5x to cover more ground.
+- Field of View (... button > Lens) sets how wide 1x zoom is. Raise it if
+  the picture feels too zoomed in.
+
+POSITION TRACKING (IPHONE APP)
+- In Safari, iPhone tracks rotation only. The HorizonLens iPhone app (in the
+  iPhone folder) adds ARKit, so the camera follows where you walk, lean
+  and crouch too.
+- Install it with Sideloadly and your Apple ID: see iPhone\INSTALL.txt.
+  A free Apple ID install lasts 7 days, then install it again.
+- Open the app, scan the QR code in HorizonLens, tap Tap to Start.
+
+KNOWN LIMITS
+- iPhone in Safari tracks rotation only (use the app for position).
+- Recordings capture all PC sound, not only the game.
+- A Forza update can break camera control until HorizonLens is updated.
+- If zoom doesn't work, close HorizonLens, restart Forza, then start
+  HorizonLens again.
+
+REPORTING A PROBLEM
+1. With HorizonLens still open (and right after the problem happened),
+   double-click Self-Test.bat. It checks your PC and opens
+   HorizonLens-selftest.txt.
+2. Send that file, what you saw, your game edition (Steam / Microsoft
+   Store), your graphics card and your phone model. For a recording problem,
+   also send Videos\HorizonLens\.last-recording.log.
+
+Questions, updates and feedback: https://discord.gg/fh6
+
+CREDITS
+- Camera control and the NVIDIA game capture use RealCam's camera module
+  (HorizonLensCamera.dll) and capture helper (HorizonLensCapture.exe).
+  Thanks to the RealCam team; these two files are RealCam's own software.
+- Forza Vista remote: Forzavista by HTTPJXRDN.
+- FFmpeg, MediaMTX, Qt / PySide6 and the other libraries listed in
+  THIRD-PARTY-NOTICES.txt.
+
+LICENSE
+HorizonLens is free software under the GNU General Public License version 3
+(LICENSE.txt). The RealCam files and the other third-party parts keep their
+own licenses: see THIRD-PARTY-NOTICES.txt.
