@@ -69,12 +69,6 @@ py -3.12 run.py
 `fetch-runtimes.ps1` downloads FFmpeg and MediaMTX into `vendor\` (too large
 for git).
 
-Tests:
-
-```
-py -3.12 -m unittest discover -s tests
-```
-
 Windows app:
 
 ```
