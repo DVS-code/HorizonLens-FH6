@@ -65,16 +65,26 @@
         try { if (await DOE.requestPermission() !== "granted") return false; }
         catch (e) { return false; }
       }
-      if (!this._on) {
-        window.addEventListener("deviceorientation", (e) => this._onOrient(e), true);
-        this._on = true;
-      }
+      if (!this._on) this.rearm();
       return true;
+    },
+
+    rearm() {
+      if (this._handler) window.removeEventListener("deviceorientation", this._handler, true);
+      this._handler = (e) => this._onOrient(e);
+      window.addEventListener("deviceorientation", this._handler, true);
+      this._on = true;
+      this.rearmedAt = performance.now();
+    },
+
+    motionAge() {
+      return this.lastEventAt ? (performance.now() - this.lastEventAt) / 1000 : Infinity;
     },
 
     _onOrient(e) {
       if (this._xr || this._native || e.alpha == null) return;
       this.events++;
+      this.lastEventAt = performance.now();
       let q = qMul(qMul(qAxis(0, 1, 0, e.alpha * D2R), qAxis(1, 0, 0, (e.beta || 0) * D2R)),
                    qAxis(0, 0, 1, -(e.gamma || 0) * D2R));
       q = qMul(q, Q_CAMERA);

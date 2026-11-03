@@ -315,6 +315,11 @@ class StreamController:
             return self.wide
         return self.orientation
 
+    def restart_live(self):
+        self.last_error = None
+        self._stop_capture()
+        self._running_size = None
+
     def phone_cannot_decode(self):
         if self.mode == self.DIRECT:
             self._direct_failed_pid = self._running_pid

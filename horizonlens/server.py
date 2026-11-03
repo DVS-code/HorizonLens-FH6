@@ -10,7 +10,7 @@ import time
 
 from aiohttp import web, WSMsgType
 
-from . import config, playertrack, rcf6, relay, tls
+from . import __version__, config, playertrack, rcf6, relay, tls
 
 
 def _game_label() -> str:
@@ -144,6 +144,7 @@ class HorizonServer:
             "pcName": pc_name,
             "hubId": hub_id,
             "game": _game_label(),
+            "version": __version__,
         })
 
     def _note_phone(self, request):
@@ -267,7 +268,13 @@ class HorizonServer:
                           if getattr(self, "stream_generation", None) else None),
             "sequencer": (self.sequencer.snapshot()
                           if getattr(self, "sequencer", None) else None),
+            "cameraModule": self.module_state(),
         })
+
+    def module_state(self) -> str:
+        if self.link is None:
+            return "off"
+        return "ok" if self.fresh_status(max_age=3.0) is not None else "no response"
 
     async def handle_record(self, request):
         cb = getattr(self, "record_toggle", None)
@@ -292,6 +299,12 @@ class HorizonServer:
             return web.json_response({"ok": False}, status=400)
         if not isinstance(body, dict):
             return web.json_response({"ok": False}, status=400)
+        if body.get("restart") is True:
+            hook = getattr(self, "restart_hook", None)
+            if hook is None:
+                return web.json_response({"ok": False}, status=503)
+            hook()
+            return web.json_response({"ok": True})
         if "quality" in body:
             hook = getattr(self, "quality_hook", None)
             if hook is None or body.get("quality") not in ("standard", "high", "max"):
@@ -772,13 +785,25 @@ class HorizonServer:
         runner = web.AppRunner(self.app)
         await runner.setup()
         ssl_ctx = None
+        self.tls_error = None
         try:
             import ssl as _ssl
             cert_p, key_p = tls.ensure_cert()
             ssl_ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
-            ssl_ctx.load_cert_chain(str(cert_p), str(key_p))
-        except Exception:
+            try:
+                ssl_ctx.load_cert_chain(str(cert_p), str(key_p))
+            except Exception:
+                for f in (cert_p, key_p):
+                    try:
+                        f.unlink()
+                    except OSError:
+                        pass
+                cert_p, key_p = tls.ensure_cert()
+                ssl_ctx.load_cert_chain(str(cert_p), str(key_p))
+        except Exception as error:
             ssl_ctx = None
+            self.tls_error = f"{type(error).__name__}: {error}"
+            server_log(f"HTTPS certificate failed: {error!r}")
         self._tls_on = ssl_ctx is not None
         site = web.TCPSite(runner, host, port, ssl_context=ssl_ctx)
         await site.start()

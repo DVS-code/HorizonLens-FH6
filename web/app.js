@@ -46,7 +46,10 @@
   let zoomFactor = 1.0;
   const opts = Object.assign(
     { run: false, steadycam: false, drone: false, standUp: true, ignoreGround: false,
-      motionFx: false, walkingFx: false, fovBase: 70, moveScale: 1.5, zoomRail: true },
+      motionFx: false, walkingFx: false, fovBase: 70, moveScale: 1.5, zoomRail: true,
+
+      floatStick: false, lookMode: "motion", lookSens: 0.25, lookInvert: false,
+      grid: false, recHold: false, smoothVideo: false },
     store.get("opts", {}));
 
   let ctrl = { seq: 0, id: 0, value: 0, movement: [0, 0, 0] };
@@ -131,11 +134,19 @@
   }
 
   let lockLook = null, lockPos = null;
+
+  let lookOff = [0, 0];
+  function currentLook(p) {
+    const touchOnly = opts.lookMode === "touch";
+    const base = touchOnly ? [0, 0, 0] : (p.tracking ? p.euler : [0, 0, 0]);
+    return opts.lookMode === "motion" ? base.slice() : [base[0] + lookOff[0], base[1] + lookOff[1], base[2]];
+  }
   const scaledPosition = (p) => p.position && p.position.map((v) => Math.round(v * opts.moveScale * 1000) / 1000);
   function setLock(on) {
     if (on) {
       const p = window.HLTracking.getPose();
-      lockLook = p.tracking ? p.euler.slice() : [0, 0, 0];
+      lockLook = currentLook(p);
+      lookOff = [0, 0];
       lockPos = scaledPosition(p) || null;
     } else lockLook = lockPos = null;
     renderLock();
@@ -226,18 +237,23 @@
     if (frozen && !gapPrefs.look) { gapFreeze(); store.set("gap", gapPrefs); }
     return {
 
-      euler: frozen ? (gapPrefs.look || [0, 0, 0]) : (lockLook || p.euler),
-      tracking: frozen || !!lockLook || p.tracking, freecam, zoom: normalizedZoom(),
+      euler: withTouchLook(frozen ? (gapPrefs.look || [0, 0, 0]) : lockLook, p),
+      tracking: frozen || !!lockLook || opts.lookMode === "touch" || p.tracking,
+      freecam, zoom: normalizedZoom(),
       gap_dynamic: frozen && gapPrefs.dynamic,
       gap_track: frozen && gapPrefs.track,
       gap_track_range: gapPrefs.range, gap_track_smooth: gapPrefs.smooth,
       gap_zoom_start: gapPrefs.start, gap_zoom_out: gapPrefs.out,
 
-      position: frozen ? null : lockLook ? lockPos : scaledPosition(p),
+      position: frozen || opts.lookMode === "touch" ? null : lockLook ? lockPos : scaledPosition(p),
       fov_base: opts.fovBase,
       control_sequence: ctrl.seq, control_id: ctrl.id, value: ctrl.value,
       movement: ctrl.movement,
     };
+  }
+  function withTouchLook(held, p) {
+    if (!held) return currentLook(p);
+    return opts.lookMode === "motion" ? held : [held[0] + lookOff[0], held[1] + lookOff[1], held[2]];
   }
   function sendSample() {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify(sample()));
@@ -286,7 +302,11 @@
     $("pairBtn").disabled = true;
     try {
       const r = await fetch("/pair?code=" + encodeURIComponent(code)).then((x) => x.json());
-      if (!r.ok) { $("pairErr").textContent = "That code doesn't match. Check HorizonLens on your PC."; return; }
+      if (!r.ok) {
+        $("pairErr").textContent = "That code doesn't match the one HorizonLens shows now. It changes " +
+          "every time you press Start: scan the newest QR code, or type the code shown under it.";
+        return;
+      }
       store.set("code", code);
       hlToken = r.token || "";
       await startSession();
@@ -578,6 +598,7 @@
     try {
       const h = await fetch("/health").then((r) => r.json());
       camOwned = !!(h.companionLinked && h.pipelineActive);
+      camModule = h.cameraModule || null;
       if (h.streamGen != null) {
         if (streamGen != null && h.streamGen !== streamGen) {
           switching = true; vidOn = false; renderStatus();
@@ -615,7 +636,8 @@
     if (vidOn) text = camOwned === false ? "Connecting to Forza…" : `${fps} FPS · ${rtt} ms`;
     else if (switching) text = "Switching view…";
     else if (camOwned) text = "Starting Live View…";
-    if (!motion && ws && ws.readyState === 1) text = "Motion access off";
+    if (!motion && ws && ws.readyState === 1 && opts.lookMode !== "touch") text = "Motion off · tap here for help";
+    else if (vidOn && camModule === "no response") text = "Camera control paused · in-game link lost";
     else if (window.HLTracking.xrActive && !window.HLTracking.positionOk && vidOn)
       text = "AR tracking limited · point at the room";
     if (recording) text = "REC " + fmtTime((Date.now() - recAt) / 1000) + (vidOn ? ` · ${fps} FPS` : "");
@@ -629,6 +651,7 @@
     renderAir();
     renderVistaButton();
     renderGap();
+    if (typeof renderV12 === "function") renderV12();
   }
   async function statsLoop() {
     if (pc && vidOn) {
@@ -680,6 +703,15 @@
                                  body: JSON.stringify(info) });
     } catch (e) {}
   }
+
+  function applySmoothVideo() {
+    if (!pc) return;
+    pc.getReceivers().forEach((r) => {
+      if (!r.track || r.track.kind !== "video") return;
+      try { r.jitterBufferTarget = opts.smoothVideo ? 150 : null; } catch (e) {}
+      try { r.playoutDelayHint = opts.smoothVideo ? 0.15 : 0; } catch (e) {}
+    });
+  }
   async function startWhep() {
     if (whepBusy) return;
     whepBusy = true;
@@ -720,6 +752,7 @@
         setTimeout(() => phoneReport("playing"), 2000);
       };
       if (v.srcObject !== e.streams[0]) { v.srcObject = e.streams[0]; v.play().catch(() => {}); }
+      applySmoothVideo();
     };
     const mine = pc;
     pc.onconnectionstatechange = () => {
@@ -891,8 +924,15 @@
     });
     v.addEventListener("pointermove", (e) => {
       if (!touches.has(e.pointerId)) return;
+      const prev = touches.get(e.pointerId);
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (touches.size === 2 && base) setZoom(base.z * spread() / base.d, true);
+      else if (touches.size === 1 && opts.lookMode !== "motion") {
+
+        const k = Number(opts.lookSens) * (opts.lookInvert ? -1 : 1);
+        lookOff[1] -= (e.clientX - prev.x) * k;
+        lookOff[0] = Math.max(-80, Math.min(80, lookOff[0] - (e.clientY - prev.y) * k));
+      }
     });
     const end = (e) => { touches.delete(e.pointerId); if (touches.size < 2) base = null; };
     v.addEventListener("pointerup", end); v.addEventListener("pointercancel", end);
@@ -948,6 +988,7 @@
     else if (key === "motionFx") emit(C.MOTION_FX, on ? 1 : 0);
     else if (key === "walkingFx") emit(C.WALKING_FX, on ? 1 : 0);
     else if (key === "zoomRail") renderLock();
+    else if (key === "grid" || key === "lookInvert") renderV12();
     else emit(C.OPTIONS, freecamOptionBits());
   }
   async function loadRecordings() {
@@ -971,6 +1012,117 @@
         list.appendChild(a);
       });
     } catch (e) { list.innerHTML = '<div class="empty">Couldn\'t reach the PC.</div>'; }
+  }
+
+  let camModule = null;
+  function renderV12() {
+    document.querySelectorAll("#optStick button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "float") === !!opts.floatStick));
+    document.querySelectorAll("#optLook button").forEach((b) => b.classList.toggle("on", b.dataset.v === opts.lookMode));
+    document.querySelectorAll("#recMode button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "hold") === !!opts.recHold));
+    $("lookMore").classList.toggle("hidden", opts.lookMode === "motion");
+    $("optLookSens").value = opts.lookSens;
+    $("optLookSensV").textContent = Number(opts.lookSens).toFixed(2) + "°";
+    $("swSmooth").classList.toggle("on", !!opts.smoothVideo);
+    const live = vidOn || camOwned === true;
+    $("stickZone").classList.toggle("hidden", !live || !opts.floatStick);
+    ["padCar", "padFree"].forEach((id) => {
+      const el = $(id);
+      el.classList.toggle("floating", !!opts.floatStick);
+      if (!opts.floatStick) { el.style.left = el.style.top = el.style.bottom = ""; el.classList.remove("show"); }
+    });
+    $("grid").classList.toggle("hidden", !opts.grid || !vidOn);
+    placeGrid();
+  }
+  function saveOpt(key, value) { opts[key] = value; store.set("opts", opts); renderV12(); }
+
+  function placeGrid() {
+    const v = $("video"), g = $("grid");
+    if (g.classList.contains("hidden")) return;
+    const r = v.getBoundingClientRect();
+    const vw = v.videoWidth || 9, vh = v.videoHeight || 16;
+    const s = Math.min(r.width / vw, r.height / vh);
+    const w = vw * s, h = vh * s;
+    Object.assign(g.style, { left: `${r.left + (r.width - w) / 2}px`, top: `${r.top + (r.height - h) / 2}px`,
+                             width: `${w}px`, height: `${h}px` });
+  }
+
+  function bindStickZone() {
+    const zone = $("stickZone");
+    let id = null, cx = 0, cy = 0, el = null, knob = null;
+    const R = () => el.clientWidth * 0.31;
+    const set = (x, y) => {
+      let dx = x - cx, dy = y - cy;
+      const r = R(), d = Math.hypot(dx, dy);
+      if (d > r) { dx *= r / d; dy *= r / d; }
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      pad[0] = dx / r; pad[1] = -dy / r; stickDirty = true;
+    };
+    zone.addEventListener("pointerdown", (e) => {
+      if (id !== null) return;
+      id = e.pointerId;
+      try { zone.setPointerCapture(id); } catch (err) {}
+      el = freecam ? $("padFree") : $("padCar"); knob = el.querySelector(".knob");
+      cx = e.clientX; cy = e.clientY;
+      Object.assign(el.style, { left: `${cx - el.offsetWidth / 2}px`, top: `${cy - el.offsetHeight / 2}px`, bottom: "auto" });
+      el.classList.add("show", "drag");
+      set(cx, cy);
+    });
+    zone.addEventListener("pointermove", (e) => { if (e.pointerId === id) set(e.clientX, e.clientY); });
+    const end = (e) => {
+      if (e.pointerId !== id) return;
+      id = null;
+      knob.style.transform = "translate(-50%,-50%)";
+      el.classList.remove("show", "drag");
+      pad[0] = 0; pad[1] = 0; stickDirty = true; flushStick();
+    };
+    zone.addEventListener("pointerup", end); zone.addEventListener("pointercancel", end);
+  }
+  function bindV12() {
+    document.querySelectorAll("#optStick button").forEach((b) => (b.onclick = () => {
+      resetSticks(); saveOpt("floatStick", b.dataset.v === "float");
+      toast(opts.floatStick ? "Floating joystick: touch the lower left to steer" : "Fixed joystick");
+    }));
+    document.querySelectorAll("#optLook button").forEach((b) => (b.onclick = () => {
+      lookOff = [0, 0]; saveOpt("lookMode", b.dataset.v);
+      toast({ motion: "Look with the phone", drag: "Look with the phone, drag the picture to turn",
+              touch: "Touch only: drag the picture to look" }[opts.lookMode]);
+    }));
+    $("optLookSens").addEventListener("input", (e) => {
+      const v = parseFloat(e.target.value); if (Number.isFinite(v)) saveOpt("lookSens", v);
+    });
+    document.querySelectorAll("#recMode button").forEach((b) => (b.onclick = () => saveOpt("recHold", b.dataset.v === "hold")));
+    $("swSmooth").onclick = () => { saveOpt("smoothVideo", !opts.smoothVideo); applySmoothVideo();
+      toast(opts.smoothVideo ? "Smooth video on (about 0.15 s more delay)" : "Smooth video off"); };
+    $("setRestartLive").onclick = async () => {
+      expectStreamChange();
+      try {
+        await fetch("/viewport", { method: "POST", headers: { "Content-Type": "application/json" },
+                                   body: JSON.stringify({ restart: true }) });
+        toast("Restarting the live view…");
+      } catch (e) { toast("Can't reach the PC"); }
+    };
+
+    $("status").addEventListener("click", async () => {
+      if (window.HLTracking.isLive() || opts.lookMode === "touch") return;
+      const ok = await window.HLTracking.enableOrientation();
+      window.HLTracking.rearm();
+      toast(ok ? "Motion: turn on Location, and allow motion sensors for this site" : "Allow Motion & Orientation access for this site");
+    });
+
+    setInterval(() => {
+      const T = window.HLTracking;
+      if (document.visibilityState !== "visible" || T.xrActive || T.native || !T._on) return;
+      if (T.motionAge() > 2 && performance.now() - (T.rearmedAt || 0) > 3000) T.rearm();
+    }, 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && window.HLTracking._on && !window.HLTracking.native) window.HLTracking.rearm();
+    });
+    window.addEventListener("resize", placeGrid);
+    $("video").addEventListener("loadedmetadata", placeGrid);
+
+    if (!/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) $("pairPcNote").classList.remove("hidden");
+    bindStickZone();
+    renderV12();
   }
 
   window.addEventListener("DOMContentLoaded", async () => {
@@ -1021,6 +1173,7 @@
         toast("Static GAP pointed straight ahead");
         return;
       }
+      lookOff = [0, 0];
       if (lockLook) {
         lockLook = [lockLook[0] || 0, 0, 0]; renderLock();
         toast("Locked · pointed straight ahead");
@@ -1031,7 +1184,22 @@
     $("runBadge").onclick = () => { setOption("run", false); toast("Run off"); };
 
     let recBusy = false;
-    $("btnRecord").onclick = async () => {
+
+    let holdStart = null;
+    $("btnRecord").addEventListener("pointerdown", () => {
+      if (opts.recHold && !recording && !recBusy) holdStart = toggleRecord();
+    });
+    const holdEnd = async () => {
+      if (!opts.recHold || !holdStart) return;
+      const started = holdStart; holdStart = null;
+      await started;
+      if (recording) toggleRecord();
+    };
+    $("btnRecord").addEventListener("pointerup", holdEnd);
+    $("btnRecord").addEventListener("pointercancel", holdEnd);
+    $("btnRecord").addEventListener("pointerleave", holdEnd);
+    $("btnRecord").onclick = () => { if (!opts.recHold) toggleRecord(); };
+    const toggleRecord = async () => {
       if (recBusy) return; recBusy = true;
       try {
         const r = await fetch("/record", { method: "POST" }).then((x) => x.json());
@@ -1091,6 +1259,7 @@
     bindGap();
     bindZoomRail();
     bindQuality();
+    bindV12();
 
     const renderHide = () => {
       const on = store.get("hideBtn", false);

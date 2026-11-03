@@ -277,10 +277,14 @@ class MainWindow(QWidget):
             f"selection-background-color:#3a3a3e;border:1px solid {LINE};}}")
         self.launchBtn = button("Launch game")
         self.attachBtn = button("Take camera")
+        self.restartLiveBtn = button("Restart live view")
+        self.restartLiveBtn.setToolTip("A black or frozen picture on the phone? This restarts the "
+                                       "game capture without restarting HorizonLens or Forza.")
         self.launchBtn.clicked.connect(self._on_launch_game)
         self.attachBtn.clicked.connect(self._on_attach)
+        self.restartLiveBtn.clicked.connect(self._on_restart_live)
         acts.addWidget(self.editionBox); acts.addWidget(self.launchBtn, 1)
-        acts.addWidget(self.attachBtn, 1)
+        acts.addWidget(self.attachBtn, 1); acts.addWidget(self.restartLiveBtn, 1)
         sl.addLayout(acts)
         sl.addStretch(1)
         self.hint = label("", 12, MUTED); self.hint.setWordWrap(True)
@@ -706,6 +710,10 @@ class MainWindow(QWidget):
         self._run_bg(lambda: self.orch.attach_companion(progress=self.attachProgress.emit),
                      lambda res: self._attach_done(res, auto=True))
 
+    def _on_restart_live(self):
+        self.orch.stream.restart_live()
+        self.hint.setText("Live view restarting… the phone reconnects on its own in a few seconds.")
+
     def _on_start_stop(self):
         if self._busy:
             return
@@ -767,6 +775,8 @@ class MainWindow(QWidget):
                     self._load_recordings()
         self._run_bg(self.orch.toggle_recording, done)
 
+    _no_phone_since = None
+
     def _set_rec_button(self, on: bool):
         self._rec_started = time.time() if on else None
         self.recBtn.setText("■  Stop  0:00" if on else "●  Record")
@@ -809,6 +819,7 @@ class MainWindow(QWidget):
             threading.Thread(target=self.orch.recorder.stop, daemon=True).start()
 
         if not running:
+            self._no_phone_since = None
             self.rowCompanion.set(None, "—"); self.rowLive.set(None, "—")
             self.rowPhone.set(None, "—")
             self.attachBtn.setEnabled(False)
@@ -823,7 +834,15 @@ class MainWindow(QWidget):
             self.rowPhone.set(False, "phone page not running")
             self.hint.setText(st["server_error"])
             return
-        if st["companion"]:
+        if st.get("tls_error"):
+            self.rowPhone.set(False, "no HTTPS certificate")
+            self.hint.setText("The phone page has no HTTPS certificate, so phones can't connect "
+                              f"({st['tls_error']}). Press Stop, then Start, to make a new one; "
+                              "if it stays, run Self-Test.bat and send the report.")
+            return
+        if st["companion"] and st.get("module") == "no response":
+            self.rowCompanion.set(False, "not responding (restart Forza if it stays)", warn=True)
+        elif st["companion"]:
             self.rowCompanion.set(True, "ready")
         elif self._attaching:
             self.rowCompanion.set(False, "connecting…", warn=True)
@@ -846,7 +865,18 @@ class MainWindow(QWidget):
         elif st["companion"] and st["clients"]:
             self.hint.setText("All set. The phone has the camera.")
         elif st["companion"]:
-            self.hint.setText("Ready. Scan the code with your phone.")
+            if self._no_phone_since is None:
+                self._no_phone_since = time.monotonic()
+            if time.monotonic() - self._no_phone_since > 60:
+                self.hint.setText(
+                    "No phone yet? Same Wi-Fi as this PC, the network set to Private, "
+                    "Allow-Firewall.bat run from this folder, and on Android allow your "
+                    "browser's Nearby devices permission (Settings > Apps > Chrome > "
+                    "Permissions), then reopen the browser.")
+            else:
+                self.hint.setText("Ready. Scan the code with your phone.")
+        if st["clients"]:
+            self._no_phone_since = None
 
 
 def _set_app_user_model_id():

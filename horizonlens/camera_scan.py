@@ -22,6 +22,9 @@ PROCESS_VM_READ = 0x0010
 MATRIX_OFFSET = 0x650
 
 PROFILES = {
+    (0x6AE12FDA, 0x0B3D9000): ("Xbox3.479.874.0 (Microsoft Store)",
+                               0x29C9120, 0x64E8020, 0x78D2F88),
+    (0x6AE1301C, 0x0B3EE000): ("Steam2.479.874.0", 0x2A48560, 0x64FD220, 0x78D96B8),
     (0x6ABA856E, 0x0B3AD000): ("Xbox3.461.691.0 (Microsoft Store)",
                                0x29C61B0, 0x64CBFE0, 0x78B3888),
     (0x6ABA8552, 0x0B3C0000): ("Steam2.461.691.0", 0x2A44890, 0x64DF160, 0x78B75B8),
@@ -381,10 +384,13 @@ def find_camera(pid, time_budget: float = 75.0, progress=None) -> ScanResult:
         diag.append(f"pe=({time_stamp:#x}, {size_of_image:#x})")
         profile = PROFILES.get((time_stamp, size_of_image))
         if profile is None:
+            known = ", ".join(sorted({p[0].split(" ")[0] for p in PROFILES.values()}, reverse=True))
             return fail(
-                "This Forza Horizon 6 version isn't supported yet (PE %08x/%08x). "
-                "Supported: Steam 2.461.691.0 / 2.440.853.0 and Microsoft Store "
-                "3.461.691.0." % (time_stamp, size_of_image))
+                "This Forza Horizon 6 version isn't supported yet: Forza was updated "
+                "after this HorizonLens was made (game build PE %08x/%08x; this "
+                "HorizonLens knows %s). Nothing is wrong with your PC: a HorizonLens "
+                "update for the new game version is needed (github.com/DVS-code/"
+                "HorizonLens-FH6/releases, discord.gg/fh6)." % (time_stamp, size_of_image, known))
         diag.append(f"profile={profile[0]}")
         problem = _validate_profile(proc, base, profile)
         if problem:

@@ -156,13 +156,65 @@ def _audio():
 
 
 def _firewall():
-    exe = str(config.app_dir() / "HorizonLens.exe")
-    out = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", "name=all",
-                          "dir=in", "verbose"], capture_output=True, text=True,
-                         timeout=20, creationflags=0x08000000).stdout.lower()
-    if exe.lower() in out:
-        return True, "inbound rule present"
+    exe = str(config.app_dir() / "HorizonLens.exe").lower()
+    r = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", "name=all",
+                        "dir=in", "verbose"], capture_output=True,
+                       timeout=20, creationflags=0x08000000)
+    raw = r.stdout or b""
+    out = ""
+    for enc in ("utf-8", "mbcs", "cp850", "latin-1"):
+        try:
+            out = raw.decode(enc).lower()
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    if not out.strip():
+        return False, ("could not read the firewall rules (netsh gave no output); "
+                       "run Allow-Firewall.bat from this folder to be sure")
+    if exe in out:
+        return True, "inbound rule present for this copy"
+    if "horizonlens.exe" in out:
+        return False, ("a rule exists for another HorizonLens folder, not this one: run "
+                       "Allow-Firewall.bat from this folder")
     return False, "no rule yet: run Allow-Firewall.bat if the phone can't connect"
+
+
+def _fov_note():
+    text = (config.data_dir() / "attach.log")
+    try:
+        lines = text.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return True, "no camera attach yet"
+    for i in range(len(lines) - 1, -1, -1):
+        line = lines[i]
+        if line.startswith("FOV table ok"):
+            return True, "within range (" + line.split(": ", 1)[-1] + ")"
+        if line.startswith("FOV table out of range"):
+            fixed = [l.strip() for l in lines[i + 1:i + 7] if "->" in l]
+            return True, ("WARNING: Forza's FOV settings were outside 20-110 deg ("
+                          + line.split(": ", 1)[-1] + "); lowered so zoom works: " + "; ".join(fixed))
+        if line.startswith("FOV table"):
+            return True, line
+    return True, "no camera attach yet"
+
+
+def _network_profile():
+    r = subprocess.run(["powershell", "-NoProfile", "-Command",
+                        "Get-NetConnectionProfile | ForEach-Object { $_.InterfaceAlias + '|' + "
+                        "$_.NetworkCategory + '|' + $_.IPv4Connectivity }"],
+                       capture_output=True, timeout=20, creationflags=0x08000000)
+    rows = [line.split("|") for line in (r.stdout or b"").decode("utf-8", "replace").splitlines()
+            if line.count("|") == 2]
+    if not rows:
+        return False, "could not read the network profile (check it is set to Private)"
+    connected = [(n, c) for n, c, v in rows if v.strip().lower() in ("internet", "localnetwork")] or \
+        [(n, c) for n, c, v in rows]
+    public = [n for n, c in connected if c.strip().lower() == "public"]
+    text = ", ".join(f"{n.strip()}: {c.strip()}" for n, c in connected)
+    if public:
+        return False, (f"{text}. Set {', '.join(public)} to Private (Windows Settings > Network "
+                       "& internet > your network > Private), or phones can't connect")
+    return True, text
 
 
 def run() -> int:
@@ -180,6 +232,8 @@ def run() -> int:
     _check(results, "PC audio", _audio)
     _check(results, "Network", lambda: (
         config.primary_lan_ip() != "127.0.0.1", ", ".join(config.lan_ipv4s()) or "no LAN address"))
+    _check(results, "Game FOV", _fov_note)
+    _check(results, "Network type", _network_profile)
     _check(results, "Firewall", _firewall)
     _check(results, "Camera files", lambda: (
         (config.VENDOR / "companion" / "HorizonLensCamera.dll").is_file()

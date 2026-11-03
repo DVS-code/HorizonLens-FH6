@@ -7,8 +7,28 @@ from pathlib import Path
 from . import config
 
 
+_DIR: Path | None = None
+
+
+def cert_dir() -> Path:
+    return _DIR or (config.data_dir() / "tls")
+
+
 def ensure_cert() -> tuple[Path, Path]:
-    d = config.data_dir() / "tls"
+    global _DIR
+    import tempfile
+    last = None
+    for d in (config.data_dir() / "tls", Path(tempfile.gettempdir()) / "HorizonLens-tls"):
+        try:
+            got = _ensure_cert_in(d)
+            _DIR = d
+            return got
+        except Exception as error:
+            last = error
+    raise last
+
+
+def _ensure_cert_in(d: Path) -> tuple[Path, Path]:
     d.mkdir(parents=True, exist_ok=True)
     cert_p, key_p = d / "cert.pem", d / "key.pem"
     ips = set(config.lan_ipv4s()) | {"127.0.0.1"}
@@ -67,7 +87,7 @@ def cert_fingerprint() -> str | None:
     import hashlib
     import ssl
     try:
-        pem = (config.data_dir() / "tls" / "cert.pem").read_text(encoding="ascii")
+        pem = (cert_dir() / "cert.pem").read_text(encoding="ascii")
         return hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
     except (OSError, ValueError):
         return None

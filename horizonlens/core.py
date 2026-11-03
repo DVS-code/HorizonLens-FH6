@@ -391,6 +391,7 @@ class Orchestrator:
         self.server.livefail_hook = self.stream.phone_cannot_decode
         self.server.baseline_hook = self.stream.set_baseline
         self.server.quality_hook = self._set_quality
+        self.server.restart_hook = self.stream.restart_live
         self.server.stream_generation = lambda: getattr(self.stream, "generation", 0)
         self.server.switcher = self.switcher
         self.server.air = self.air
@@ -485,4 +486,6 @@ class Orchestrator:
             "capture_error": self.stream.capture_error(),
             "clients": len(self.server._clients) if self.server else 0,
             "server_error": getattr(self, "server_error", None),
+            "tls_error": getattr(self.server, "tls_error", None) if self.server else None,
+            "module": self.server.module_state() if self.server else None,
         }

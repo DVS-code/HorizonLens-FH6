@@ -1,4 +1,4 @@
-HorizonLens 1.0.0
+HorizonLens 1.2.0
 =================
 
 Use your phone as a hand-held camera inside Forza Horizon 6, with the game
@@ -10,7 +10,8 @@ streamed live to the phone and recordings saved on your PC.
 - Gap Cam: Static (put the phone down and drive), Dynamic (zooms out with
   speed) and Player Tracking (follows other players near you).
 - Lock for dolly shots, an on-screen zoom slider and a Hide button for a
-  clean screen.
+  clean screen; a floating joystick, touch look (drag the picture to turn)
+  and grid lines, all optional in the settings.
 - Recording on the PC with game sound, up to the game's full resolution.
 - A cinematic sequencer inside the game, air suspension and a Forza Vista
   remote.
@@ -81,8 +82,17 @@ ON THE PHONE
   and HEIGHT still move it in a straight line, for dolly and slider shots. A LOCKED badge
   shows; tap it to re-aim where the phone points, Recenter points it
   straight ahead, tap the padlock again to unlock.
-- The ... button: zoom, zoom slider, Run, Steadycam, Drone Inertia, motion
-  effects (Walking adds a realistic walking step in Freecam).
+- The ... button: zoom, zoom slider, grid lines, Run, Steadycam, Drone
+  Inertia, motion effects (Walking adds a realistic walking step in Freecam).
+- ... button > Controls:
+  - Joystick: Fixed (where it is now) or Floating (touch anywhere in the
+    lower left and the stick appears under your thumb).
+  - Look: Phone (turn the phone to turn the camera), + Drag (also drag the
+    picture with one finger to turn it) or Touch (only dragging turns it:
+    for no room to move, or slow steady pans). Drag Speed and Invert Drag
+    set how it feels; Recenter clears any drag.
+- ... button > Lens > Grid Lines: a rule-of-thirds grid over the picture for
+  framing (never recorded).
 - The red button records on the PC (in Videos\HorizonLens), with game sound,
   showing exactly what the phone shows. The photos button lists and downloads
   recordings. Settings > Recording > Quality: Standard records the live
@@ -91,6 +101,12 @@ ON THE PHONE
   sharper, without touching the live view. Portrait recordings are a 9:16
   slice of the game screen, so a higher game resolution (or NVIDIA DSR /
   DLDSR) gives them more real detail.
+- Settings > Recording > Record Button: Tap (start / stop) or Hold (records
+  only while your finger is on the button, like Snapchat).
+- Settings > Live View > Smooth Video: holds about 0.15 s of video so an
+  uneven Wi-Fi connection plays back evenly (less stutter, a little more
+  delay). Restart live view fixes a black or frozen picture without
+  restarting anything (the PC window has the same button).
 - Hide button: Settings > Appearance > Hide Button adds an eye button (top
   left). Tap it to hide every control so only the picture is left; tap it
   again to bring them back.
@@ -208,6 +224,42 @@ POSITION TRACKING (IPHONE APP)
 - Install it with Sideloadly and your Apple ID: see iPhone\INSTALL.txt.
   A free Apple ID install lasts 7 days, then install it again.
 - Open the app, scan the QR code in HorizonLens, tap Tap to Start.
+
+FULLSCREEN AND WINDOWED
+- The phone camera, live view and recording work with Forza in fullscreen.
+- Only the in-game sequencer menu needs fullscreen off: in Forza open
+  Settings > Video and turn Fullscreen off. Forza then runs in a window with
+  a border; maximise it (or set the game resolution to your screen's) to
+  fill the screen.
+
+TROUBLESHOOTING
+- The phone can't open the page (it times out, or shows
+  ERR_TOO_MANY_RETRIES):
+  1. Android: Settings > Apps > Chrome (or your browser) > Permissions >
+     Nearby devices (or Local network) > Allow, then close the browser from
+     recent apps and open the link again. Newer Android versions block the
+     connection to your PC without it.
+  2. Windows: Settings > Network & internet > your Wi-Fi or Ethernet > set
+     the network to Private (Public blocks phones).
+  3. Run Allow-Firewall.bat from the folder you run HorizonLens from.
+  4. Phone and PC on the same network (not a guest Wi-Fi), VPN apps fully
+     closed.
+- "Motion off · tap here for help" on the phone: tap it. On Android, turn
+  Location on and allow motion sensors for the site in the browser. Or use
+  ... > Controls > Look > Touch to steer by dragging instead.
+- Black or frozen picture: Restart live view (Settings > Live View on the
+  phone, or the button in the PC window). If it stays, restart HorizonLens
+  and Forza, then run Self-Test.bat once.
+- "Camera control paused · in-game link lost", or the camera looks like the
+  normal game camera: the camera module in the game stopped answering
+  ("Camera control: not responding" in the PC window). Restart Forza, get
+  into free roam driving, then press Start in HorizonLens.
+- "That code doesn't match": the code changes every time you press Start.
+  Scan the newest QR code with the phone you'll film with (the page is
+  meant for the phone, not a PC browser).
+- "This Forza Horizon 6 version isn't supported yet": Forza updated after
+  this HorizonLens was made. Check github.com/DVS-code/HorizonLens-FH6/releases
+  or the Discord for the update.
 
 KNOWN LIMITS
 - iPhone in Safari tracks rotation only (use the app for position).

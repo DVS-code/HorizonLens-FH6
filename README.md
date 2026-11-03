@@ -20,8 +20,10 @@ the PC with game sound.
 - **Gap Cam**: Static Gap Cam (put the phone down and drive), Dynamic Gap Cam
   (zooms out smoothly with speed) and Player Tracking (follows other players
   driving near you; AI traffic and parked cars are ignored).
-- **Lock** for dolly and slider shots, an on-screen **zoom slider**, and a
-  **Hide** button that leaves only the picture on the phone.
+- **Lock** for dolly and slider shots, an on-screen **zoom slider**, a
+  **Hide** button that leaves only the picture on the phone, and optional
+  **floating joystick**, **touch look** (drag to turn the camera) and **grid
+  lines**.
 - **Recording** on the PC with game sound: Standard (the live view), High
   (1080x1920) or Max (the game's full resolution) through a dedicated capture.
 - **Cinematic sequencer** inside the game: keyframed shots on a timeline,
@@ -31,7 +33,7 @@ the PC with game sound.
 
 ## Download and use
 
-Download `HorizonLens-1.0.0-win64.zip` from the
+Download `HorizonLens-1.2.0-win64.zip` from the
 [Releases](../../releases) page, unzip it anywhere and follow `README.txt`
 inside. In short:
 

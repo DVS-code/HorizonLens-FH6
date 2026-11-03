@@ -250,7 +250,7 @@ def _dll_already_loaded(pid: int) -> bool:
 FOV_TABLE_RANGE = (20.0, 110.0)
 
 
-def fov_table_targets(dll_path: Path) -> list[tuple[int, str]]:
+def fov_table_targets(dll_path: Path, build: tuple[int, int] | None = None) -> list[tuple[int, str]]:
     import struct
     d = Path(dll_path).read_bytes()
     pe = struct.unpack_from("<I", d, 0x3C)[0]
@@ -265,33 +265,62 @@ def fov_table_targets(dll_path: Path) -> list[tuple[int, str]]:
                 return offset - raw + va
         raise ValueError("offset outside sections")
 
+    def file_of(rva):
+        for _, _, va, raw_size, raw in sections:
+            if va <= rva < va + raw_size:
+                return rva - va + raw
+        return None
+
     name_at = d.find(b"\0chase_min\0") + 1
     if name_at <= 0:
         return []
-    entry = d.find(struct.pack("<Q", image_base + rva_of(name_at))) - 16
-    if entry < 0:
+    needle = struct.pack("<Q", image_base + rva_of(name_at))
+    tables = []
+    i = d.find(needle)
+    while i >= 0:
+        entry = i - 16
+        if entry >= 0:
+            table = []
+            for k in range(6):
+                rva, _, name_ptr, _ = struct.unpack_from("<QQQQ", d, entry + 32 * k)
+                o = file_of(name_ptr - image_base)
+                if o is None or not (0 < rva < 0x20000000):
+                    table = []
+                    break
+                table.append((rva, d[o:d.index(b"\0", o)].decode(errors="replace")))
+            if len(table) == 6 and table[0][1] == "chase_min":
+                tables.append(table)
+        i = d.find(needle, i + 1)
+    names = [n for _, n in tables[0]] if tables else []
+    if build is None:
+        return tables[0] if len(tables) == 1 else []
+    ts, size = build
+    if struct.pack("<I", ts) not in d:
         return []
-    out = []
-    for i in range(6):
-        rva, _, name_ptr, _ = struct.unpack_from("<QQQQ", d, entry + 32 * i)
-        o = name_ptr - image_base
-        for _, _, va, raw_size, raw in sections:
-            if va <= o < va + raw_size:
-                o = o - va + raw
-                break
-        out.append((rva, d[o:d.index(b"\0", o)].decode(errors="replace")))
-    return out
+    ident = struct.pack("<II", ts, size)
+    j = d.find(ident)
+    while j >= 0:
+        if j >= 8 and len(d) >= j + 8 + 16 * 8:
+            fields = struct.unpack_from("<16Q", d, j + 8)
+            fov = fields[10:16]
+            if names and all(0x1000 < v < 0x20000000 for v in fov)                     and fov[1] == fov[0] + 4 and fov[3] == fov[2] + 4 and fov[5] == fov[4] + 4:
+                return list(zip(fov, names))
+        j = d.find(ident, j + 1)
+    if b"Steam2." in d:
+        return []
+    return tables[0] if len(tables) == 1 else []
 
 
-def repair_fov_table(pid: int, image_base: int, dll_path: Path) -> list[str]:
+def repair_fov_table(pid: int, image_base: int, dll_path: Path,
+                     build: tuple[int, int] | None = None) -> list[str]:
     import math
     import struct
     try:
-        targets = fov_table_targets(dll_path)
+        targets = fov_table_targets(dll_path, build)
     except (OSError, ValueError, struct.error) as e:
         return [f"FOV table: module unreadable ({e})"]
     if len(targets) != 6:
-        return ["FOV table: not found in the camera module"]
+        return ["FOV table: not found in the camera module for this game build (left as is)"]
     access = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION
     h = k32.OpenProcess(access, False, pid)
     if not h:
@@ -386,7 +415,8 @@ def attach(dll_source: str | Path | None = None,
     key = _write_session_file(folder, pid, scan.image_base)
     _write_instance_file(folder, pid, scan.object_addr, scan.image_base)
 
-    camera_scan._log([f"pid={pid}"] + repair_fov_table(pid, scan.image_base, src))
+    build = camera_scan.identify(pid).get("pe")
+    camera_scan._log([f"pid={pid}"] + repair_fov_table(pid, scan.image_base, src, build))
 
     not_ready = not_driving_yet(pid, scan.object_addr)
     if not_ready:
